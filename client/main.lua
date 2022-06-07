@@ -91,7 +91,7 @@ local function CreateZone(type, number)
         boxName = Config.Locations[type].label
         size = 3
     elseif type == "vehicle" then
-        event = "qb-tow:client:Vehicle"
+        -- event = "qb-tow:client:Vehicle"
         label = "Vehicle"
         coords = vector3(Config.Locations[type].coords.x, Config.Locations[type].coords.y, Config.Locations[type].coords.z)
         heading = Config.Locations[type].coords.h
@@ -139,7 +139,7 @@ local function CreateZone(type, number)
                 if type == "main" then
                     TriggerEvent('qb-tow:client:PaySlip')
                 elseif type == "vehicle" then
-                    TriggerEvent('qb-tow:client:Vehicle')
+                    -- TriggerEvent('qb-tow:client:Vehicle')
                 elseif type == "towspots" then
                     TriggerEvent('qb-tow:client:SpawnNPCVehicle')
                 end
@@ -176,19 +176,31 @@ local function deliverVehicle(vehicle)
     VehicleSpawned = false
     QBCore.Functions.Notify(Lang:t("mission.delivered_vehicle"), "success")
     QBCore.Functions.Notify(Lang:t("mission.get_new_vehicle"))
-
+    
     local randomLocation = getRandomVehicleLocation()
-    CurrentLocation.x = Config.Locations["towspots"][randomLocation].coords.x
-    CurrentLocation.y = Config.Locations["towspots"][randomLocation].coords.y
-    CurrentLocation.z = Config.Locations["towspots"][randomLocation].coords.z
-    CurrentLocation.model = Config.Locations["towspots"][randomLocation].model
-    CurrentLocation.id = randomLocation
-    CreateZone("towspots", randomLocation)
+    LocationModel = (Config.Locations["towspots"][randomLocation].model)
+    TriggerServerEvent('qb-phone:server:sendNewMail', {
+        sender = "LSPD",
+        subject = "New impound job",
+        message = "Hey driver, Thank you for your delivery<br/><br/>Another officer spotted a vehicle for impound.<br/>The model of the vehicle is: " ..LocationModel.. "<br/><br/>I attached the location to the email and once you accept it it will be put into your navigation system",
+        button = {
+            enabled = true,
+            buttonEvent = "qb-tow:client:GetNpcJob",
+            buttonData = randomLocation,
+        }
+    })
+    -- local randomLocation = getRandomVehicleLocation()
+    -- CurrentLocation.x = Config.Locations["towspots"][randomLocation].coords.x
+    -- CurrentLocation.y = Config.Locations["towspots"][randomLocation].coords.y
+    -- CurrentLocation.z = Config.Locations["towspots"][randomLocation].coords.z
+    -- CurrentLocation.model = Config.Locations["towspots"][randomLocation].model
+    -- CurrentLocation.id = randomLocation
+    -- CreateZone("towspots", randomLocation)
 
-    CurrentBlip = AddBlipForCoord(CurrentLocation.x, CurrentLocation.y, CurrentLocation.z)
-    SetBlipColour(CurrentBlip, 3)
-    SetBlipRoute(CurrentBlip, true)
-    SetBlipRouteColour(CurrentBlip, 3)
+    -- CurrentBlip = AddBlipForCoord(CurrentLocation.x, CurrentLocation.y, CurrentLocation.z)
+    -- SetBlipColour(CurrentBlip, 3)
+    -- SetBlipRoute(CurrentBlip, true)
+    -- SetBlipRouteColour(CurrentBlip, 3)
 end
 
 local function CreateElements()
@@ -223,7 +235,7 @@ RegisterNetEvent('qb-tow:client:SpawnVehicle', function()
     QBCore.Functions.SpawnVehicle(vehicleInfo, function(veh)
         SetVehicleNumberPlateText(veh, "TOWR"..tostring(math.random(1000, 9999)))
         SetEntityHeading(veh, coords.w)
-        exports['LegacyFuel']:SetFuel(veh, 100.0)
+        exports['ps-fuel']:SetFuel(veh, 100.0)
         SetEntityAsMissionEntity(veh, true, true)
         CloseMenuFull()
         TaskWarpPedIntoVehicle(PlayerPedId(), veh, -1)
@@ -251,15 +263,8 @@ RegisterNetEvent('QBCore:Client:OnJobUpdate', function(JobInfo)
     end
 end)
 
-RegisterNetEvent('jobs:client:ToggleNpc', function()
+RegisterNetEvent('qb-tow:client:GetNpcJob', function(randomLocation)
     if QBCore.Functions.GetPlayerData().job.name == "tow" then
-        if CurrentTow ~= nil then
-            QBCore.Functions.Notify(Lang:t("error.finish_work"), "error")
-            return
-        end
-        NpcOn = not NpcOn
-        if NpcOn then
-            local randomLocation = getRandomVehicleLocation()
             CurrentLocation.x = Config.Locations["towspots"][randomLocation].coords.x
             CurrentLocation.y = Config.Locations["towspots"][randomLocation].coords.y
             CurrentLocation.z = Config.Locations["towspots"][randomLocation].coords.z
@@ -271,6 +276,44 @@ RegisterNetEvent('jobs:client:ToggleNpc', function()
             SetBlipColour(CurrentBlip, 3)
             SetBlipRoute(CurrentBlip, true)
             SetBlipRouteColour(CurrentBlip, 3)
+    end
+end)
+
+RegisterNetEvent('jobs:client:ToggleNpc', function()
+    if QBCore.Functions.GetPlayerData().job.name == "tow" then
+        if CurrentTow ~= nil then
+            QBCore.Functions.Notify(Lang:t("error.finish_work"), "error")
+            return
+        end
+        NpcOn = not NpcOn
+        if NpcOn then
+            local randomLocation = getRandomVehicleLocation()
+            LocationModel = (Config.Locations["towspots"][randomLocation].model)
+            Test = "test"
+            print(LocationModel)
+            print(Test)
+            TriggerServerEvent('qb-phone:server:sendNewMail', {
+                sender = "LSPD",
+                subject = "Impound job",
+                message = "Hey driver, <br/><br/>One of our officers spotted a vehicle for impound.<br/>The model of the vehicle is: " ..LocationModel.. "<br/><br/>I attached the location to the email and once you accept it it will be put into your navigation system",
+                button = {
+                    enabled = true,
+                    buttonEvent = "qb-tow:client:GetNpcJob",
+                    buttonData = randomLocation,
+                }
+            })
+            -- local randomLocation = getRandomVehicleLocation()
+            -- CurrentLocation.x = Config.Locations["towspots"][randomLocation].coords.x
+            -- CurrentLocation.y = Config.Locations["towspots"][randomLocation].coords.y
+            -- CurrentLocation.z = Config.Locations["towspots"][randomLocation].coords.z
+            -- CurrentLocation.model = Config.Locations["towspots"][randomLocation].model
+            -- CurrentLocation.id = randomLocation
+            -- CreateZone("towspots", randomLocation)
+
+            -- CurrentBlip = AddBlipForCoord(CurrentLocation.x, CurrentLocation.y, CurrentLocation.z)
+            -- SetBlipColour(CurrentBlip, 3)
+            -- SetBlipRoute(CurrentBlip, true)
+            -- SetBlipRouteColour(CurrentBlip, 3)
         else
             if DoesBlipExist(CurrentBlip) then
                 RemoveBlip(CurrentBlip)
@@ -314,13 +357,13 @@ RegisterNetEvent('qb-tow:client:TowVehicle', function()
                             flags = 16,
                         }, {}, {}, function() -- Done
                             StopAnimTask(PlayerPedId(), "mini@repair", "fixing_a_ped", 1.0)
-                            AttachEntityToEntity(targetVehicle, vehicle, GetEntityBoneIndexByName(vehicle, 'bodyshell'), 0.0, -1.5 + -0.85, 0.0 + 1.15, 0, 0, 0, 1, 1, 0, 1, 0, 1)
+                            AttachEntityToEntity(targetVehicle, vehicle, GetEntityBoneIndexByName(vehicle, 'bodyshell'), 0.0, -3.1 , 0.0 + 1.05, 0, 0, -35, 1, 1, 0, 1, 0, 1)
                             FreezeEntityPosition(targetVehicle, true)
                             CurrentTow = targetVehicle
                             if NpcOn then
                                 RemoveBlip(CurrentBlip)
                                 QBCore.Functions.Notify(Lang:t("mission.goto_depot"), "primary", 5000)
-                                CurrentBlip2 = AddBlipForCoord(491.00, -1314.69, 29.25)
+                                CurrentBlip2 = AddBlipForCoord(Config.Locations["deliverloc"].coords.x, Config.Locations["deliverloc"].coords.y, Config.Locations["deliverloc"].coords.z)
                                 SetBlipColour(CurrentBlip2, 3)
                                 SetBlipRoute(CurrentBlip2, true)
                                 SetBlipRouteColour(CurrentBlip2, 3)
@@ -354,7 +397,7 @@ RegisterNetEvent('qb-tow:client:TowVehicle', function()
                 DetachEntity(CurrentTow, true, true)
                 if NpcOn then
                     local targetPos = GetEntityCoords(CurrentTow)
-                    if #(targetPos - vector3(Config.Locations["vehicle"].coords.x, Config.Locations["vehicle"].coords.y, Config.Locations["vehicle"].coords.z)) < 25.0 then
+                    if #(targetPos - vector3(Config.Locations["deliverloc"].coords.x, Config.Locations["deliverloc"].coords.y, Config.Locations["deliverloc"].coords.z)) < 25.0 then
                         deliverVehicle(CurrentTow)
                     end
                 end
@@ -384,20 +427,6 @@ RegisterNetEvent('qb-tow:client:TakeOutVehicle', function(data)
     end
 end)
 
-RegisterNetEvent('qb-tow:client:Vehicle', function()
-    local vehicle = GetVehiclePedIsIn(PlayerPedId(), false)
-    if not CurrentTow then
-        if vehicle and isTowVehicle(vehicle) then
-            DeleteVehicle(GetVehiclePedIsIn(PlayerPedId()))
-            TriggerServerEvent('qb-tow:server:DoBail', false)
-        else
-            MenuGarage()
-        end
-    else
-        QBCore.Functions.Notify(Lang:t("error.finish_work"), "error")
-    end
-end)
-
 RegisterNetEvent('qb-tow:client:PaySlip', function()
     if JobsDone > 0 then
         RemoveBlip(CurrentBlip)
@@ -412,7 +441,7 @@ end)
 RegisterNetEvent('qb-tow:client:SpawnNPCVehicle', function()
     if not VehicleSpawned then
         QBCore.Functions.SpawnVehicle(CurrentLocation.model, function(veh)
-            exports['LegacyFuel']:SetFuel(veh, 0.0)
+            exports['ps-fuel']:SetFuel(veh, 0.0)
             VehicleSpawned = true
         end, CurrentLocation, true)
     end
